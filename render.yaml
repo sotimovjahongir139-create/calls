@@ -1,0 +1,75 @@
+services:
+  # ── FastAPI web service ───────────────────────────────────────────────────
+  - type: web
+    name: crm-dashboard-api
+    env: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: AMOCRM_DOMAIN
+        sync: false
+      - key: AMOCRM_TOKEN
+        sync: false
+      - key: AMOCRM_USER_ID
+        sync: false
+      - key: MYSQL_HOST
+        sync: false
+      - key: MYSQL_PORT
+        sync: false
+      - key: MYSQL_USER
+        sync: false
+      - key: MYSQL_PASSWORD
+        sync: false
+      - key: MYSQL_DB_CALLS
+        value: calldb2
+      - key: MYSQL_DB_TELEGRAM
+        value: telegram_dashboard
+      - key: MYSQL_DB_REALTIME
+        value: crm_realtime
+      - key: SLA_WARNING_MINUTES
+        value: "8"
+      - key: SLA_BREACH_MINUTES
+        value: "10"
+      - key: TASK_MINUTES_PER_CLIENT
+        value: "8"
+
+  # ── Background worker (APScheduler) ──────────────────────────────────────
+  - type: worker
+    name: crm-dashboard-worker
+    env: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scheduler.py
+    envVars:
+      - key: AMOCRM_DOMAIN
+        sync: false
+      - key: AMOCRM_TOKEN
+        sync: false
+      - key: AMOCRM_USER_ID
+        sync: false
+      - key: MYSQL_HOST
+        sync: false
+      - key: MYSQL_PORT
+        sync: false
+      - key: MYSQL_USER
+        sync: false
+      - key: MYSQL_PASSWORD
+        sync: false
+      - key: MYSQL_DB_CALLS
+        value: calldb2
+      - key: MYSQL_DB_TELEGRAM
+        value: telegram_dashboard
+      - key: MYSQL_DB_REALTIME
+        value: crm_realtime
+      - key: SLA_WARNING_MINUTES
+        value: "8"
+      - key: SLA_BREACH_MINUTES
+        value: "10"
+      - key: TASK_MINUTES_PER_CLIENT
+        value: "8"

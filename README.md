@@ -6,7 +6,7 @@ AmoCRM → missed calls → real-time dashboard (signals / tasks / rating).
 - **Backend**: Python 3.11, FastAPI, APScheduler, pymysql
 - **Frontend**: React 18, Vite, Tailwind CSS
 - **DB**: MySQL (external)
-- **Deploy**: Railway (backend) + Vercel (frontend)
+- **Deploy**: Render (backend) + Vercel (frontend)
 
 ---
 
@@ -38,19 +38,26 @@ npm run dev      # → http://localhost:3000
 
 ## Deploy
 
-### Railway — 2 services from one repo
+### Render — 2 services (defined in render.yaml)
 
-| Service  | Root dir  | Start command                                   |
-|----------|-----------|-------------------------------------------------|
-| web      | `backend` | `uvicorn main:app --host 0.0.0.0 --port $PORT`  |
-| worker   | `backend` | `python scheduler.py`                           |
+1. Go to [render.com](https://render.com) → New → Blueprint
+2. Connect GitHub repo → Render reads `render.yaml` automatically
+3. Two services are created: `crm-dashboard-api` (web) + `crm-dashboard-worker` (worker)
+4. Fill in secret env vars in Render dashboard for both services:
 
-Add all `.env` variables in Railway → Variables.
+| Variable        | Value                        |
+|-----------------|------------------------------|
+| `AMOCRM_DOMAIN` | `numbersarkon.amocrm.ru`     |
+| `AMOCRM_TOKEN`  | your JWT token               |
+| `MYSQL_HOST`    | your MySQL server IP         |
+| `MYSQL_PORT`    | `3306`                       |
+| `MYSQL_USER`    | your MySQL user              |
+| `MYSQL_PASSWORD`| your MySQL password          |
 
 ### Vercel
 
 1. Import repo, set **Root Directory** = `frontend`
-2. Add env var: `VITE_API_URL=https://your-railway-app.railway.app`
+2. Add env var: `VITE_API_URL=https://crm-dashboard-api.onrender.com`
 3. Deploy.
 
 ---

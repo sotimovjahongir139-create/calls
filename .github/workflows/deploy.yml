@@ -5,9 +5,9 @@ on:
     branches: [main]
 
 jobs:
-  # Railway auto-deploys via GitHub integration — no action needed.
+  # Render auto-deploys via GitHub integration — no action needed.
   # Vercel auto-deploys via GitHub integration — no action needed.
-  # This job is a lint/build gate before those auto-deploys land.
+  # This job is a build gate before those auto-deploys land.
 
   build-frontend:
     runs-on: ubuntu-latest
