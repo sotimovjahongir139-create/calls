@@ -2,9 +2,9 @@ import os
 import requests
 import sys
 import time
-import pyodbc
 from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
+from db import get_conn
 
 load_dotenv()
 
@@ -54,12 +54,7 @@ TIMEOUT     = 60
 RETRIES     = 3
 RETRY_DELAY = 5
 
-DB_CONN_STR = (
-    "DRIVER={ODBC Driver 17 for SQL Server};"
-    "SERVER=localhost;"
-    "DATABASE=calldb2;"
-    "Trusted_Connection=yes;"
-)
+DB_CALLS = os.getenv("MYSQL_DB_CALLS", "calldb2")
 
 HOUR_SLOTS = [
     ("09:00-11:00", 9,  11),
@@ -288,9 +283,9 @@ def hv(s, l):
 
 
 def save_monthly(stat_month, p_start, p_end, manager, s):
-    conn = pyodbc.connect(DB_CONN_STR)
+    conn = get_conn(DB_CALLS)
     cur  = conn.cursor()
-    cur.execute("DELETE FROM amo_call_monthly_stats WHERE stat_month=? AND manager_name=?", stat_month, manager)
+    cur.execute("DELETE FROM amo_call_monthly_stats WHERE stat_month=%s AND manager_name=%s", (stat_month, manager))
     cur.execute("""
         INSERT INTO amo_call_monthly_stats (
             stat_month, manager_name, period_start, period_end,
@@ -298,7 +293,7 @@ def save_monthly(stat_month, p_start, p_end, manager, s):
             missed_clients, recalled_clients, not_recalled_clients,
             answer_rate, recall_rate, no_recall_pct,
             h_09_11, h_11_13, h_13_15, h_15_17, h_17_19, h_19_21, h_21_23
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, (
         stat_month, manager, p_start, p_end,
         s["total"], s["incoming"], s["outgoing"],
@@ -313,9 +308,9 @@ def save_monthly(stat_month, p_start, p_end, manager, s):
 
 
 def save_daily(stat_date, manager, s):
-    conn = pyodbc.connect(DB_CONN_STR)
+    conn = get_conn(DB_CALLS)
     cur  = conn.cursor()
-    cur.execute("DELETE FROM amo_call_daily_stats WHERE stat_date=? AND manager_name=?", stat_date, manager)
+    cur.execute("DELETE FROM amo_call_daily_stats WHERE stat_date=%s AND manager_name=%s", (stat_date, manager))
     cur.execute("""
         INSERT INTO amo_call_daily_stats (
             stat_date, manager_name,
@@ -323,7 +318,7 @@ def save_daily(stat_date, manager, s):
             missed_clients, recalled_clients, not_recalled_clients,
             answer_rate, recall_rate, no_recall_pct,
             h_09_11, h_11_13, h_13_15, h_15_17, h_17_19, h_19_21, h_21_23
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, (
         stat_date, manager,
         s["total"], s["incoming"], s["outgoing"],

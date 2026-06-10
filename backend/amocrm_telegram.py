@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 import requests
-import pyodbc
 from dotenv import load_dotenv
+from db import get_conn
 
 load_dotenv()
 
@@ -24,12 +24,10 @@ TARGET_MANAGER_NAME            = "Perfect"
 FILTER_BY_RESPONSIBLE_MANAGER = False
 TELEGRAM_ORIGIN               = "ru.whatcrm.telegram"
 
-SQL_SERVER   = os.getenv("SQL_SERVER", "localhost")
-SQL_DATABASE = "telegram_dashboard"
-SQL_TRUSTED  = True
+DB_TELEGRAM = os.getenv("MYSQL_DB_TELEGRAM", "telegram_dashboard")
 
-SAVE_TO_SQL  = True
-REPORT_NAME  = "ALL_TELEGRAM"
+SAVE_TO_SQL = True
+REPORT_NAME = "ALL_TELEGRAM"
 
 BASE_URL = f"https://{SUBDOMAIN}.amocrm.ru/api/v4"
 HEADERS  = {
@@ -64,36 +62,18 @@ TS_TO   = int(DAY_END.timestamp())
 # ============================================================
 # SQL
 # ============================================================
-def _conn_str(db="telegram_dashboard"):
-    if SQL_TRUSTED:
-        return (
-            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-            f"SERVER={SQL_SERVER};DATABASE={db};Trusted_Connection=yes;"
-        )
-    uid = os.getenv("SQL_USERNAME", "")
-    pwd = os.getenv("SQL_PASSWORD", "")
-    return (
-        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-        f"SERVER={SQL_SERVER};DATABASE={db};UID={uid};PWD={pwd};"
-    )
-
-
 def ensure_tables():
-    conn = pyodbc.connect(_conn_str("master"), autocommit=True)
+    conn = get_conn()
     cur  = conn.cursor()
-    cur.execute(f"""
-        IF DB_ID('{SQL_DATABASE}') IS NULL
-            CREATE DATABASE [{SQL_DATABASE}];
-    """)
-    cur.close(); conn.close()
+    cur.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_TELEGRAM}`")
+    conn.commit(); cur.close(); conn.close()
 
-    conn = pyodbc.connect(_conn_str())
+    conn = get_conn(DB_TELEGRAM)
     cur  = conn.cursor()
     cur.execute("""
-    IF OBJECT_ID('dbo.telegram_daily_stats','U') IS NULL
-    CREATE TABLE dbo.telegram_daily_stats (
+    CREATE TABLE IF NOT EXISTS telegram_daily_stats (
         report_date   DATE         NOT NULL,
-        report_name   NVARCHAR(100) NOT NULL,
+        report_name   VARCHAR(100) NOT NULL,
         unique_contacts INT NOT NULL,
         unique_talks    INT NOT NULL,
         unique_leads    INT NOT NULL,
@@ -106,46 +86,45 @@ def ensure_tables():
         response_rate    FLOAT NOT NULL,
         avg_response_minutes   FLOAT NULL,
         median_response_minutes FLOAT NULL,
-        loaded_at DATETIME NOT NULL DEFAULT GETDATE(),
-        CONSTRAINT PK_tg_daily PRIMARY KEY (report_date, report_name)
-    );""")
+        loaded_at DATETIME NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (report_date, report_name)
+    )""")
     cur.execute("""
-    IF OBJECT_ID('dbo.telegram_response_details','U') IS NULL
-    CREATE TABLE dbo.telegram_response_details (
-        id          BIGINT IDENTITY(1,1) PRIMARY KEY,
+    CREATE TABLE IF NOT EXISTS telegram_response_details (
+        id          BIGINT AUTO_INCREMENT PRIMARY KEY,
         report_date DATE NOT NULL,
-        report_name NVARCHAR(100) NOT NULL,
+        report_name VARCHAR(100) NOT NULL,
         contact_id  BIGINT NULL,
         lead_id     BIGINT NULL,
         talk_id     BIGINT NULL,
         client_time       DATETIME NULL,
         manager_reply_time DATETIME NULL,
         response_minutes   FLOAT NULL,
-        status        NVARCHAR(30) NOT NULL,
+        status        VARCHAR(30) NOT NULL,
         client_messages_in_turn   INT NULL,
         manager_messages_in_reply INT NULL,
-        loaded_at DATETIME NOT NULL DEFAULT GETDATE()
-    );""")
+        loaded_at DATETIME NOT NULL DEFAULT NOW()
+    )""")
     conn.commit(); cur.close(); conn.close()
 
 
 def save_to_sql(summary, detail_rows):
     ensure_tables()
-    conn = pyodbc.connect(_conn_str())
+    conn = get_conn(DB_TELEGRAM)
     cur  = conn.cursor()
     rd, rn = summary["report_date"], summary["report_name"]
 
-    cur.execute("DELETE FROM dbo.telegram_response_details WHERE report_date=? AND report_name=?", rd, rn)
-    cur.execute("DELETE FROM dbo.telegram_daily_stats       WHERE report_date=? AND report_name=?", rd, rn)
+    cur.execute("DELETE FROM telegram_response_details WHERE report_date=%s AND report_name=%s", (rd, rn))
+    cur.execute("DELETE FROM telegram_daily_stats       WHERE report_date=%s AND report_name=%s", (rd, rn))
 
     cur.execute("""
-        INSERT INTO dbo.telegram_daily_stats (
+        INSERT INTO telegram_daily_stats (
             report_date, report_name,
             unique_contacts, unique_talks, unique_leads,
             total_events, client_messages, manager_messages,
             client_turns, answered_turns, waiting_turns,
             response_rate, avg_response_minutes, median_response_minutes
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, (
         rd, rn,
         summary["unique_contacts"], summary["unique_talks"], summary["unique_leads"],
@@ -158,13 +137,13 @@ def save_to_sql(summary, detail_rows):
 
     for row in detail_rows:
         cur.execute("""
-            INSERT INTO dbo.telegram_response_details (
+            INSERT INTO telegram_response_details (
                 report_date, report_name,
                 contact_id, lead_id, talk_id,
                 client_time, manager_reply_time,
                 response_minutes, status,
                 client_messages_in_turn, manager_messages_in_reply
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, (
             row["report_date"], row["report_name"],
             row["contact_id"], row["lead_id"], row["talk_id"],
