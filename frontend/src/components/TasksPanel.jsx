@@ -69,9 +69,6 @@ export default function TasksPanel() {
                   <span className="font-mono text-sm text-white truncate">
                     {task.phone || `#${task.contact_id}`}
                   </span>
-                  {task.manager_name && (
-                    <span className="text-xs text-slate-400 truncate">{task.manager_name}</span>
-                  )}
                 </div>
                 <div className="flex gap-3 text-xs text-slate-400">
                   <span>Kutgan: <strong className={s.time}>{task.waiting_minutes} daq</strong></span>

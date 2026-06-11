@@ -1,5 +1,5 @@
 """
-Delta-fetch missed calls from AmoCRM every 10 minutes.
+Delta-fetch missed calls from AmoCRM every 20 minutes.
 
 Logic per event:
   incoming_call, duration=0/-1  → missed → INSERT/UPDATE missed_calls_rt
@@ -22,8 +22,7 @@ logger = logging.getLogger(__name__)
 
 DOMAIN         = os.getenv("AMOCRM_DOMAIN")
 TOKEN          = os.getenv("AMOCRM_TOKEN")
-TARGET_USER_ID = os.getenv("AMOCRM_USER_ID")          # optional: filter by user id
-TARGET_MANAGER = os.getenv("TARGET_MANAGER")           # optional: filter by manager name
+TARGET_MANAGER = os.getenv("TARGET_MANAGER")           # filter by manager name
 SLA_WARNING    = float(os.getenv("SLA_WARNING_MINUTES", 8))
 SLA_BREACH     = float(os.getenv("SLA_BREACH_MINUTES", 10))
 
@@ -33,14 +32,14 @@ LAST_FETCH_FILE = Path("/tmp/.last_fetch_ts")
 HEADERS  = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
 BASE_URL = f"https://{DOMAIN}/api/v4"
 
-_phone_cache   = {}
-_manager_cache = {}
+_phone_cache    = {}
+_manager_cache  = {}
+_target_user_id = None   # resolved once from API
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 def _now_naive() -> datetime:
-    """Current Tashkent time as naive datetime (for MySQL)."""
     return datetime.now(TZ).replace(tzinfo=None)
 
 
@@ -53,7 +52,7 @@ def _sla_status(waiting_min: float) -> str:
 def _get_last_fetch_ts() -> int:
     if LAST_FETCH_FILE.exists():
         return int(float(LAST_FETCH_FILE.read_text().strip()))
-    return int((datetime.now(TZ) - timedelta(minutes=10)).timestamp())
+    return int((datetime.now(TZ) - timedelta(minutes=20)).timestamp())
 
 
 def _save_last_fetch_ts(ts: int):
@@ -69,21 +68,41 @@ def _api_get(path: str, params: dict = None) -> dict | list:
     return resp.json()
 
 
+def _resolve_target_user_id() -> str | None:
+    """Fetch Asadbek's user ID from /api/v4/users using TARGET_MANAGER name."""
+    global _target_user_id
+    if _target_user_id:
+        return _target_user_id
+    if not TARGET_MANAGER:
+        return None
+    try:
+        data = _api_get("/users", params={"limit": 250})
+        for u in (data.get("_embedded") or {}).get("users", []):
+            if TARGET_MANAGER.lower() in u.get("name", "").lower():
+                _target_user_id = str(u["id"])
+                logger.info("Resolved %s → user_id=%s", TARGET_MANAGER, _target_user_id)
+                return _target_user_id
+    except Exception as e:
+        logger.warning("Could not resolve target user ID: %s", e)
+    return None
+
+
 def _fetch_events(since_ts: int) -> list:
     """Paginate through incoming_call + outgoing_call events since since_ts."""
+    uid    = _resolve_target_user_id()
     events = []
-    for page in range(1, 20):   # safety cap at 4 750 events
+    for page in range(1, 20):   # safety cap
         params = {
-            "filter[type][0]":             "incoming_call",
-            "filter[type][1]":             "outgoing_call",
-            "filter[created_at][from]":    since_ts,
+            "filter[type][0]":          "incoming_call",
+            "filter[type][1]":          "outgoing_call",
+            "filter[created_at][from]": since_ts,
             "page":  page,
             "limit": 250,
         }
-        if TARGET_USER_ID:
-            params["filter[created_by][]"] = TARGET_USER_ID
+        if uid:
+            params["filter[created_by][]"] = uid
 
-        data = _api_get("/events", params)
+        data  = _api_get("/events", params)
         batch = data.get("_embedded", {}).get("events", []) if isinstance(data, dict) else []
         events.extend(batch)
         if len(batch) < 250:
@@ -92,27 +111,17 @@ def _fetch_events(since_ts: int) -> list:
 
 
 def _parse_duration(event: dict):
-    """
-    Extract call duration from event value_after.
-    AmoCRM may store it as:
-      [{note: {params: {duration: X}}}]   (older format)
-      [{duration: X}]                      (newer format)
-    Returns int or None.
-    """
     for item in event.get("value_after") or []:
         if isinstance(item, dict):
-            # nested note params
             params = item.get("note", {}).get("params", {})
             if "duration" in params:
                 return params["duration"]
-            # flat
             if "duration" in item:
                 return item["duration"]
     return None
 
 
 def _get_contact_id(event: dict):
-    """Return contact_id from event, trying entity_links if entity_type != contacts."""
     if event.get("entity_type") == "contacts":
         return event.get("entity_id")
     for link in event.get("entity_links") or []:
@@ -170,10 +179,22 @@ def run_realtime_fetcher():
 
     logger.info("Fetched %d events (since ts=%d)", len(events), since_ts)
 
+    # Sort by created_at so missed → recall ordering is correct within a batch
+    events.sort(key=lambda e: e.get("created_at", 0))
+
     conn = get_conn(DB_REALTIME)
     cur  = conn.cursor()
 
     try:
+        # Clean up any rows from other managers (runs every fetch, idempotent)
+        if TARGET_MANAGER:
+            deleted = cur.execute(
+                "DELETE FROM missed_calls_rt WHERE LOWER(manager_name) NOT LIKE %s",
+                (f"%{TARGET_MANAGER.lower()}%",)
+            )
+            if deleted:
+                logger.info("Cleaned %d non-target manager rows", deleted)
+
         for ev in events:
             ev_type    = ev.get("type")
             duration   = _parse_duration(ev)
@@ -194,8 +215,8 @@ def run_realtime_fetcher():
                     manager_name = _get_manager_name(user_id)
                     if TARGET_MANAGER and TARGET_MANAGER.lower() not in manager_name.lower():
                         continue
-                    waiting_min  = (now_naive - missed_at_naive).total_seconds() / 60
-                    sla          = _sla_status(waiting_min)
+                    waiting_min = (now_naive - missed_at_naive).total_seconds() / 60
+                    sla         = _sla_status(waiting_min)
 
                     cur.execute("""
                         INSERT INTO missed_calls_rt
@@ -209,7 +230,7 @@ def run_realtime_fetcher():
                     logger.info("Missed: contact=%s waiting=%.1f min", contact_id, waiting_min)
 
                 else:
-                    # ── client called back (answered inbound) ──
+                    # ── client called back and was answered ──
                     n = cur.execute(
                         "DELETE FROM missed_calls_rt WHERE contact_id=%s", (contact_id,)
                     )
@@ -217,7 +238,7 @@ def run_realtime_fetcher():
                         logger.info("Client recalled: contact=%s removed", contact_id)
 
             elif ev_type == "outgoing_call" and duration and duration > 0:
-                # ── manager called back ──
+                # ── manager called back successfully ──
                 n = cur.execute(
                     "DELETE FROM missed_calls_rt WHERE contact_id=%s", (contact_id,)
                 )
@@ -227,7 +248,7 @@ def run_realtime_fetcher():
         # ── refresh waiting_minutes for all open records ──
         cur.execute("SELECT id, missed_at FROM missed_calls_rt")
         for row in cur.fetchall():
-            ma          = row["missed_at"]                        # naive datetime from MySQL
+            ma          = row["missed_at"]
             waiting_min = (now_naive - ma).total_seconds() / 60
             sla         = _sla_status(waiting_min)
             cur.execute(

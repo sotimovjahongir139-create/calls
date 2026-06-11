@@ -150,11 +150,6 @@ def api_stats_telegram(type: str = Query("daily", regex="^(daily|monthly)$")):
         else:
             cur.execute("""
                 SELECT
-                    DATE_FORMAT(report_date, '%%Y-%%m-01') AS report_month,
-                    report_name,
-                    SUM(unique_contacts)  AS unique_contacts,
-                    SUM(unique_talks)     AS unique_talks,
-                    SUM(unique_leads)     AS unique_leads,
                     SUM(total_events)     AS total_events,
                     SUM(client_messages)  AS client_messages,
                     SUM(manager_messages) AS manager_messages,
@@ -162,11 +157,9 @@ def api_stats_telegram(type: str = Query("daily", regex="^(daily|monthly)$")):
                     SUM(answered_turns)   AS answered_turns,
                     SUM(waiting_turns)    AS waiting_turns,
                     ROUND(SUM(answered_turns)/NULLIF(SUM(client_turns),0)*100, 2) AS response_rate,
-                    ROUND(AVG(avg_response_minutes), 2)    AS avg_response_minutes,
-                    ROUND(AVG(median_response_minutes), 2) AS median_response_minutes
+                    ROUND(AVG(avg_response_minutes), 2) AS avg_response_minutes
                 FROM telegram_daily_stats
-                GROUP BY report_month, report_name
-                ORDER BY report_month DESC
+                WHERE report_date >= DATE_FORMAT(NOW(), '%%Y-%%m-01')
             """)
         rows = cur.fetchall()
         cur.close(); conn.close()

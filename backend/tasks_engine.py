@@ -12,7 +12,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 TZ                  = pytz.timezone("Asia/Tashkent")
-MINUTES_PER_CLIENT  = float(os.getenv("TASK_MINUTES_PER_CLIENT", 8))
+MINUTES_PER_CLIENT  = float(os.getenv("TASK_MINUTES_PER_CLIENT", 20))
 
 
 def get_tasks() -> dict:
