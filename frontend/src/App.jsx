@@ -9,46 +9,47 @@ export default function App() {
   const today = new Date().toLocaleDateString("uz-UZ");
 
   return (
-    <div className="min-h-screen bg-slate-900 p-4 space-y-4">
-      <header className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white">CRM Real-time Dashboard</h1>
-        <span className="text-xs text-slate-400">{today}</span>
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b border-gray-200 shadow-sm px-5 py-3 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-gray-900">CRM Dashboard</h1>
+        <span className="text-xs text-gray-400">{today}</span>
       </header>
 
-      {/* Top navigation */}
-      <nav className="flex gap-1">
-        {[
-          { id: "calls",    label: "Qoʼngʼiroqlar" },
-          { id: "telegram", label: "Telegram" },
-        ].map(t => (
-          <button
-            key={t.id}
-            onClick={() => setMainTab(t.id)}
-            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors ${
-              mainTab === t.id
-                ? "bg-blue-600 text-white shadow-lg"
-                : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
+      <div className="p-4 space-y-4 max-w-7xl mx-auto">
+        <nav className="flex gap-2">
+          {[
+            { id: "calls",    label: "📞 Qoʼngʼiroqlar" },
+            { id: "telegram", label: "💬 Telegram" },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setMainTab(t.id)}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+                mainTab === t.id
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
 
-      {mainTab === "calls" && (
-        <>
-          <SignalsPanel />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ minHeight: 380 }}>
-            <TasksPanel />
-            <RatingPanel />
-          </div>
-          <StatsPanel view="calls" />
-        </>
-      )}
+        {mainTab === "calls" && (
+          <>
+            <SignalsPanel />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <TasksPanel />
+              <RatingPanel />
+            </div>
+            <StatsPanel view="calls" />
+          </>
+        )}
 
-      {mainTab === "telegram" && (
-        <StatsPanel view="telegram" />
-      )}
+        {mainTab === "telegram" && (
+          <StatsPanel view="telegram" />
+        )}
+      </div>
     </div>
   );
 }

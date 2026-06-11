@@ -146,7 +146,7 @@ def api_stats_telegram(type: str = Query("daily", regex="^(daily|monthly)$")):
         conn = get_conn(DB_TELEGRAM)
         cur  = conn.cursor()
         if type == "daily":
-            cur.execute("SELECT * FROM telegram_daily_stats ORDER BY report_date DESC LIMIT 100")
+            cur.execute("SELECT * FROM telegram_daily_stats ORDER BY report_date DESC LIMIT 1")
         else:
             cur.execute("""
                 SELECT
