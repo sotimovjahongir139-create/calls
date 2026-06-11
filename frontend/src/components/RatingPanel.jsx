@@ -1,61 +1,64 @@
 import { usePolling } from "../hooks/usePolling";
 import { getRatings } from "../utils/api";
 
+const CARD = { background: "#1A1D2E", border: "1px solid #2A2D3E", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" };
+
 const GRADE = {
-  A: { color: "text-green-600",  bg: "bg-green-50  border-green-200",  bar: "bg-green-500"  },
-  B: { color: "text-blue-600",   bg: "bg-blue-50   border-blue-200",   bar: "bg-blue-500"   },
-  C: { color: "text-yellow-600", bg: "bg-yellow-50 border-yellow-200", bar: "bg-yellow-500" },
-  D: { color: "text-orange-600", bg: "bg-orange-50 border-orange-200", bar: "bg-orange-500" },
-  E: { color: "text-red-600",    bg: "bg-red-50    border-red-200",    bar: "bg-red-500"    },
+  A: { color: "#00D4AA", bg: "rgba(0,212,170,0.12)",  border: "rgba(0,212,170,0.3)",  bar: "#00D4AA" },
+  B: { color: "#4B6EF5", bg: "rgba(75,110,245,0.12)", border: "rgba(75,110,245,0.3)", bar: "#4B6EF5" },
+  C: { color: "#FFA726", bg: "rgba(255,167,38,0.12)", border: "rgba(255,167,38,0.3)", bar: "#FFA726" },
+  D: { color: "#FFA726", bg: "rgba(255,167,38,0.12)", border: "rgba(255,167,38,0.3)", bar: "#FFA726" },
+  E: { color: "#FF4757", bg: "rgba(255,71,87,0.12)",  border: "rgba(255,71,87,0.3)",  bar: "#FF4757" },
 };
 
 export default function RatingPanel() {
   const { data, error, loading } = usePolling(getRatings, 5 * 60_000);
 
-  if (loading) return <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 animate-pulse h-64" />;
+  if (loading) return <div className="rounded-xl p-4 animate-pulse h-64" style={CARD} />;
   if (error)   return (
-    <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm">{error}</div>
+    <div className="rounded-xl p-4 text-sm" style={{ ...CARD, color: "#FF4757" }}>{error}</div>
   );
 
-  const grade  = data?.grade ?? "E";
-  const cfg    = GRADE[grade] ?? GRADE.E;
-  const pct    = data?.pct ?? 0;
+  const grade   = data?.grade ?? "E";
+  const cfg     = GRADE[grade] ?? GRADE.E;
+  const pct     = data?.pct ?? 0;
   const isFinal = new Date().getHours() >= 22;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 flex flex-col h-full">
+    <div className="rounded-xl p-4 flex flex-col h-full" style={CARD}>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-semibold text-gray-900">📊 Reyting</h2>
-        <span className="text-xs text-gray-400">har 5 daqiqada</span>
+        <h2 className="text-base font-semibold text-white">📊 Reyting</h2>
+        <span className="text-xs" style={{ color: "#8B8FA8" }}>har 5 daqiqada</span>
       </div>
 
-      {/* Grade */}
-      <div className={`rounded-xl border p-4 text-center mb-4 ${cfg.bg}`}>
-        <div className="text-xs text-gray-500 mb-1">{isFinal ? "Yakuniy baho" : "Joriy baho"}</div>
-        <div className={`text-7xl font-black leading-none ${cfg.color}`}>{grade}</div>
-        <div className="text-sm text-gray-600 mt-1 font-semibold">{pct}%</div>
-      </div>
-
-      {/* Progress */}
-      <div className="mb-4">
-        <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${cfg.bar}`}
-            style={{ width: `${Math.min(pct, 100)}%` }}
-          />
+      {/* Grade box */}
+      <div className="rounded-xl p-4 text-center mb-4"
+           style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}>
+        <div className="text-xs mb-1" style={{ color: "#8B8FA8" }}>
+          {isFinal ? "Yakuniy baho" : "Joriy baho"}
         </div>
-        <div className="flex justify-between text-xs mt-1 text-gray-400">
+        <div className="text-7xl font-black leading-none" style={{ color: cfg.color }}>{grade}</div>
+        <div className="text-sm font-semibold mt-1" style={{ color: cfg.color }}>{pct}%</div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="mb-4">
+        <div className="rounded-full overflow-hidden" style={{ background: "#2A2D3E", height: "8px" }}>
+          <div className="h-full rounded-full transition-all duration-500"
+               style={{ width: `${Math.min(pct, 100)}%`, background: cfg.bar }} />
+        </div>
+        <div className="flex justify-between text-xs mt-1" style={{ color: "#5A5D72" }}>
           <span>A≥90 · B≥75 · C≥60 · D≥40</span>
           <span>{data?.total_score}/{data?.max_score} ball</span>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats grid */}
       <div className="grid grid-cols-2 gap-2 text-xs mt-auto">
-        <Cell label="Jami"      value={data?.total_tasks}       color="text-gray-900"      />
-        <Cell label="Vaqtida"   value={data?.completed_on_time} color="text-green-600"     />
-        <Cell label="Kechikkan" value={data?.completed_late}    color="text-yellow-600"    />
-        <Cell label="Ochiq"     value={data?.open_tasks}        color="text-orange-600"    />
+        <Cell label="Jami"      value={data?.total_tasks}       color="#FFFFFF"   />
+        <Cell label="Vaqtida"   value={data?.completed_on_time} color="#00D4AA"   />
+        <Cell label="Kechikkan" value={data?.completed_late}    color="#FFA726"   />
+        <Cell label="Ochiq"     value={data?.open_tasks}        color="#FFA726"   />
       </div>
     </div>
   );
@@ -63,9 +66,9 @@ export default function RatingPanel() {
 
 function Cell({ label, value, color }) {
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 text-center">
-      <div className="text-gray-400 text-xs">{label}</div>
-      <div className={`font-bold text-lg ${color}`}>{value ?? 0}</div>
+    <div className="rounded-lg p-2 text-center" style={{ background: "#2A2D3E" }}>
+      <div className="text-xs" style={{ color: "#8B8FA8" }}>{label}</div>
+      <div className="font-bold text-lg" style={{ color }}>{value ?? 0}</div>
     </div>
   );
 }
