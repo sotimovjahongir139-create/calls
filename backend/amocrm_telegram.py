@@ -23,7 +23,7 @@ if not ACCESS_TOKEN or not SUBDOMAIN:
     sys.exit(1)
 
 TARGET_MANAGER_NAME            = os.getenv("TARGET_MANAGER", "Asadbek")
-FILTER_BY_RESPONSIBLE_MANAGER = False
+FILTER_BY_RESPONSIBLE_MANAGER = True
 TELEGRAM_ORIGIN               = "ru.whatcrm.telegram"
 
 DB_TELEGRAM = os.getenv("MYSQL_DB_TELEGRAM", "telegram_dashboard")

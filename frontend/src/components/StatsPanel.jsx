@@ -190,13 +190,13 @@ function TelegramView({ row, loading }) {
     <div className="space-y-4">
       {/* Top metric cards */}
       <div className="flex gap-2 flex-wrap">
-        <MetricCard icon="💬" label="Jami events"    value={row.total_events}                                              />
-        <MetricCard icon="👤" label="Klient xabar"   value={row.client_messages}                                          />
-        <MetricCard icon="👨" label="Manager xabar"  value={row.manager_messages}                                         />
-        <MetricCard icon="📊" label="Javob darajasi" value={`${Number(row.response_rate || 0).toFixed(1)}%`} color="text-green-600" highlight={false} />
-        <MetricCard icon="✅" label="Hal qilingan"   value={row.answered_turns}   color="text-blue-600"                   />
-        <MetricCard icon="⏳" label="Kutilayotgan"   value={row.waiting_turns}    color="text-orange-600"                 />
-        <MetricCard icon="⏱️" label="O'rtacha (daq)" value={Number(row.avg_response_minutes || 0).toFixed(1)}             />
+        <MetricCard label="Jami events"    value={row.total_events}                                              />
+        <MetricCard label="Klient xabar"   value={row.client_messages}                                          />
+        <MetricCard label="Manager xabar"  value={row.manager_messages}                                         />
+        <MetricCard label="Javob darajasi" value={`${Number(row.response_rate || 0).toFixed(1)}%`} color="text-green-600" />
+        <MetricCard label="Hal qilingan"   value={row.answered_turns}   color="text-blue-600"                   />
+        <MetricCard label="Kutilayotgan"   value={row.waiting_turns}    color="text-orange-600"                 />
+        <MetricCard label="O'rtacha (daq)" value={Number(row.avg_response_minutes || 0).toFixed(1)}             />
       </div>
 
       {/* Bars */}

@@ -169,6 +169,28 @@ def api_stats_telegram(type: str = Query("daily", regex="^(daily|monthly)$")):
     return {"type": type, "rows": rows}
 
 
+# ── /api/debug/telegram ──────────────────────────────────────────────────────
+
+@app.get("/api/debug/telegram")
+def debug_telegram():
+    try:
+        conn = get_conn(DB_TELEGRAM)
+        cur  = conn.cursor()
+        cur.execute("SELECT COUNT(*) AS cnt FROM telegram_daily_stats")
+        count = cur.fetchone()
+        cur.execute("""
+            SELECT report_date, report_name, total_events,
+                   client_messages, manager_messages, response_rate
+            FROM telegram_daily_stats
+            ORDER BY report_date DESC LIMIT 5
+        """)
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+        return {"total_rows": count["cnt"], "latest": rows}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ── /api/admin/clear-tables ──────────────────────────────────────────────────
 
 @app.post("/api/admin/clear-tables")

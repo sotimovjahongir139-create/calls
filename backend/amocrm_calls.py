@@ -326,6 +326,8 @@ def calc(records):
     rec   = round(rc / m * 100) if m else 0
     norec = 100 - rec if m else 0
     avg_recall = round(sum(recall_gaps) / len(recall_gaps), 1) if recall_gaps else 0.0
+    print(f"   [recall_gaps] count={len(recall_gaps)} sum={round(sum(recall_gaps),1)} avg={avg_recall}")
+    print(f"   [recall_gaps] sample={[round(x,1) for x in recall_gaps[:10]]}")
 
     return {
         "total": total, "incoming": in_a, "outgoing": out_a,
