@@ -22,7 +22,7 @@ if not ACCESS_TOKEN or not SUBDOMAIN:
     print("XATO: .env da AMOCRM_TOKEN yoki AMOCRM_SUBDOMAIN/AMOCRM_DOMAIN topilmadi.")
     sys.exit(1)
 
-TARGET_MANAGER_NAME            = "Perfect"
+TARGET_MANAGER_NAME            = os.getenv("TARGET_MANAGER", "Asadbek")
 FILTER_BY_RESPONSIBLE_MANAGER = False
 TELEGRAM_ORIGIN               = "ru.whatcrm.telegram"
 

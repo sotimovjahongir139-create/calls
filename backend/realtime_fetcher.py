@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 DOMAIN         = os.getenv("AMOCRM_DOMAIN")
 TOKEN          = os.getenv("AMOCRM_TOKEN")
 TARGET_USER_ID = os.getenv("AMOCRM_USER_ID")          # optional: filter by user id
+TARGET_MANAGER = os.getenv("TARGET_MANAGER")           # optional: filter by manager name
 SLA_WARNING    = float(os.getenv("SLA_WARNING_MINUTES", 8))
 SLA_BREACH     = float(os.getenv("SLA_BREACH_MINUTES", 10))
 
@@ -191,6 +192,8 @@ def run_realtime_fetcher():
                     # ── missed call ──
                     phone        = _get_phone(contact_id)
                     manager_name = _get_manager_name(user_id)
+                    if TARGET_MANAGER and TARGET_MANAGER.lower() not in manager_name.lower():
+                        continue
                     waiting_min  = (now_naive - missed_at_naive).total_seconds() / 60
                     sla          = _sla_status(waiting_min)
 

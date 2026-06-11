@@ -10,7 +10,7 @@ load_dotenv()
 
 AMOCRM_DOMAIN   = os.getenv("AMOCRM_DOMAIN")
 AMOCRM_TOKEN    = os.getenv("AMOCRM_TOKEN")
-TARGET_MANAGERS = ["Ziyomiddin"]
+TARGET_MANAGERS = [os.getenv("TARGET_MANAGER", "Asadbek")]
 
 if not AMOCRM_DOMAIN or not AMOCRM_TOKEN:
     print("XATO: .env da AMOCRM_DOMAIN yoki AMOCRM_TOKEN topilmadi.")
@@ -88,6 +88,7 @@ def ensure_tables():
             h_17_19 INT DEFAULT 0,
             h_19_21 INT DEFAULT 0,
             h_21_23 INT DEFAULT 0,
+            avg_recall_minutes FLOAT DEFAULT 0,
             loaded_at DATETIME DEFAULT NOW(),
             UNIQUE KEY uq_month_mgr (stat_month, manager_name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
@@ -113,10 +114,17 @@ def ensure_tables():
             h_17_19 INT DEFAULT 0,
             h_19_21 INT DEFAULT 0,
             h_21_23 INT DEFAULT 0,
+            avg_recall_minutes FLOAT DEFAULT 0,
             loaded_at DATETIME DEFAULT NOW(),
             UNIQUE KEY uq_date_mgr (stat_date, manager_name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     """)
+    # migration: add avg_recall_minutes if missing on existing tables
+    for tbl in ("amo_call_monthly_stats", "amo_call_daily_stats"):
+        try:
+            cur.execute(f"ALTER TABLE `{tbl}` ADD COLUMN avg_recall_minutes FLOAT DEFAULT 0")
+        except Exception:
+            pass
     conn.commit(); cur.close(); conn.close()
 
 HOUR_SLOTS = [
@@ -355,8 +363,9 @@ def save_monthly(stat_month, p_start, p_end, manager, s):
             total_calls, incoming_answered, outgoing_answered,
             missed_clients, recalled_clients, not_recalled_clients,
             answer_rate, recall_rate, no_recall_pct,
-            h_09_11, h_11_13, h_13_15, h_15_17, h_17_19, h_19_21, h_21_23
-        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            h_09_11, h_11_13, h_13_15, h_15_17, h_17_19, h_19_21, h_21_23,
+            avg_recall_minutes
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, (
         stat_month, manager, p_start, p_end,
         s["total"], s["incoming"], s["outgoing"],
@@ -364,7 +373,7 @@ def save_monthly(stat_month, p_start, p_end, manager, s):
         s["answer_rate"], s["recall_rate"], s["no_recall_pct"],
         hv(s,"09:00-11:00"), hv(s,"11:00-13:00"), hv(s,"13:00-15:00"),
         hv(s,"15:00-17:00"), hv(s,"17:00-19:00"), hv(s,"19:00-21:00"),
-        hv(s,"21:00-23:00"),
+        hv(s,"21:00-23:00"), s.get("avg_recall_minutes", 0),
     ))
     conn.commit(); cur.close(); conn.close()
     print(f"   OK monthly -> {stat_month} | {manager} | total={s['total']}")
@@ -380,8 +389,9 @@ def save_daily(stat_date, manager, s):
             total_calls, incoming_answered, outgoing_answered,
             missed_clients, recalled_clients, not_recalled_clients,
             answer_rate, recall_rate, no_recall_pct,
-            h_09_11, h_11_13, h_13_15, h_15_17, h_17_19, h_19_21, h_21_23
-        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            h_09_11, h_11_13, h_13_15, h_15_17, h_17_19, h_19_21, h_21_23,
+            avg_recall_minutes
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, (
         stat_date, manager,
         s["total"], s["incoming"], s["outgoing"],
@@ -389,7 +399,7 @@ def save_daily(stat_date, manager, s):
         s["answer_rate"], s["recall_rate"], s["no_recall_pct"],
         hv(s,"09:00-11:00"), hv(s,"11:00-13:00"), hv(s,"13:00-15:00"),
         hv(s,"15:00-17:00"), hv(s,"17:00-19:00"), hv(s,"19:00-21:00"),
-        hv(s,"21:00-23:00"),
+        hv(s,"21:00-23:00"), s.get("avg_recall_minutes", 0),
     ))
     conn.commit(); cur.close(); conn.close()
     print(f"   OK daily   -> {stat_date} | {manager} | total={s['total']}")

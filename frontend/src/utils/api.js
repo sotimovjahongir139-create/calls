@@ -11,4 +11,6 @@ export const getTasks        = ()           => apiFetch("/api/tasks");
 export const completeTask    = (id)         => apiFetch(`/api/tasks/${id}/complete`, { method: "POST" });
 export const getRatings      = (d)          => apiFetch(`/api/ratings${d ? `?date=${d}` : ""}`);
 export const getCallStats    = (type="daily") => apiFetch(`/api/stats/calls?type=${type}`);
-export const getTelegramStats = ()          => apiFetch("/api/stats/telegram");
+export const getTelegramStats = (type="daily") => apiFetch(`/api/stats/telegram?type=${type}`);
+export const clearTables      = ()             => apiFetch("/api/admin/clear-tables", { method: "POST" });
+export const runEtl           = (script)       => apiFetch(`/api/admin/run-etl?script=${script}`, { method: "POST" });

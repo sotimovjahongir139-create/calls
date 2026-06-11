@@ -141,17 +141,77 @@ def api_stats_calls(type: str = Query("daily", regex="^(daily|monthly)$")):
 
 
 @app.get("/api/stats/telegram")
-def api_stats_telegram():
+def api_stats_telegram(type: str = Query("daily", regex="^(daily|monthly)$")):
     try:
         conn = get_conn(DB_TELEGRAM)
         cur  = conn.cursor()
-        cur.execute("SELECT * FROM telegram_daily_stats ORDER BY report_date DESC LIMIT 100")
+        if type == "daily":
+            cur.execute("SELECT * FROM telegram_daily_stats ORDER BY report_date DESC LIMIT 100")
+        else:
+            cur.execute("""
+                SELECT
+                    DATE_FORMAT(report_date, '%%Y-%%m-01') AS report_month,
+                    report_name,
+                    SUM(unique_contacts)  AS unique_contacts,
+                    SUM(unique_talks)     AS unique_talks,
+                    SUM(unique_leads)     AS unique_leads,
+                    SUM(total_events)     AS total_events,
+                    SUM(client_messages)  AS client_messages,
+                    SUM(manager_messages) AS manager_messages,
+                    SUM(client_turns)     AS client_turns,
+                    SUM(answered_turns)   AS answered_turns,
+                    SUM(waiting_turns)    AS waiting_turns,
+                    ROUND(SUM(answered_turns)/NULLIF(SUM(client_turns),0)*100, 2) AS response_rate,
+                    ROUND(AVG(avg_response_minutes), 2)    AS avg_response_minutes,
+                    ROUND(AVG(median_response_minutes), 2) AS median_response_minutes
+                FROM telegram_daily_stats
+                GROUP BY report_month, report_name
+                ORDER BY report_month DESC
+            """)
         rows = cur.fetchall()
         cur.close(); conn.close()
     except Exception as e:
         logger.error("telegram stats: %s", e)
         raise HTTPException(status_code=500, detail="DB error")
-    return {"type": "daily", "rows": rows}
+    return {"type": type, "rows": rows}
+
+
+# ── /api/admin/clear-tables ──────────────────────────────────────────────────
+
+@app.post("/api/admin/clear-tables")
+def api_clear_tables():
+    cleared = []
+    try:
+        conn = get_conn(DB_REALTIME)
+        cur  = conn.cursor()
+        for t in ("missed_calls_rt", "task_completions", "daily_ratings"):
+            cur.execute(f"TRUNCATE TABLE {t}")
+            cleared.append(f"{DB_REALTIME}.{t}")
+        conn.commit(); cur.close(); conn.close()
+    except Exception as e:
+        logger.error("clear realtime: %s", e)
+
+    try:
+        conn = get_conn(DB_CALLS)
+        cur  = conn.cursor()
+        for t in ("amo_call_daily_stats", "amo_call_monthly_stats"):
+            cur.execute(f"TRUNCATE TABLE {t}")
+            cleared.append(f"{DB_CALLS}.{t}")
+        conn.commit(); cur.close(); conn.close()
+    except Exception as e:
+        logger.error("clear calls: %s", e)
+
+    try:
+        conn = get_conn(DB_TELEGRAM)
+        cur  = conn.cursor()
+        for t in ("telegram_daily_stats", "telegram_response_details"):
+            cur.execute(f"TRUNCATE TABLE {t}")
+            cleared.append(f"{DB_TELEGRAM}.{t}")
+        conn.commit(); cur.close(); conn.close()
+    except Exception as e:
+        logger.error("clear telegram: %s", e)
+
+    return {"status": "cleared", "tables": cleared}
 
 
 # ── /api/admin/run-etl ────────────────────────────────────────────────────────

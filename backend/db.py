@@ -101,6 +101,7 @@ def ensure_schema():
             h_17_19 INT DEFAULT 0,
             h_19_21 INT DEFAULT 0,
             h_21_23 INT DEFAULT 0,
+            avg_recall_minutes   FLOAT DEFAULT 0,
             loaded_at DATETIME DEFAULT NOW(),
             UNIQUE KEY uq_month_mgr (stat_month, manager_name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
@@ -126,10 +127,17 @@ def ensure_schema():
             h_17_19 INT DEFAULT 0,
             h_19_21 INT DEFAULT 0,
             h_21_23 INT DEFAULT 0,
+            avg_recall_minutes   FLOAT DEFAULT 0,
             loaded_at DATETIME DEFAULT NOW(),
             UNIQUE KEY uq_date_mgr (stat_date, manager_name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     """)
+    # migration: add avg_recall_minutes if missing (existing tables)
+    for tbl in ("amo_call_monthly_stats", "amo_call_daily_stats"):
+        try:
+            cur.execute(f"ALTER TABLE {tbl} ADD COLUMN avg_recall_minutes FLOAT DEFAULT 0")
+        except Exception:
+            pass
     conn.commit(); cur.close(); conn.close()
 
     conn = get_conn(DB_TELEGRAM)
