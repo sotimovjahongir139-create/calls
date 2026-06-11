@@ -152,3 +152,39 @@ def api_stats_telegram():
         logger.error("telegram stats: %s", e)
         raise HTTPException(status_code=500, detail="DB error")
     return {"type": "daily", "rows": rows}
+
+
+# ── /api/admin/run-etl ────────────────────────────────────────────────────────
+
+@app.post("/api/admin/run-etl")
+def api_run_etl(script: str = Query(..., regex="^(calls|telegram|all)$")):
+    import threading, traceback
+    results = {}
+
+    def run_calls():
+        try:
+            from amocrm_calls import main as calls_main
+            calls_main()
+            results["calls"] = "ok"
+        except BaseException as e:
+            results["calls"] = traceback.format_exc()
+
+    def run_telegram():
+        try:
+            from amocrm_telegram import main as tg_main
+            tg_main()
+            results["telegram"] = "ok"
+        except BaseException as e:
+            results["telegram"] = traceback.format_exc()
+
+    threads = []
+    if script in ("calls", "all"):
+        t = threading.Thread(target=run_calls)
+        t.start(); threads.append(t)
+    if script in ("telegram", "all"):
+        t = threading.Thread(target=run_telegram)
+        t.start(); threads.append(t)
+    for t in threads:
+        t.join(timeout=300)
+
+    return {"status": "done", "results": results}
