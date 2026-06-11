@@ -14,10 +14,12 @@ load_dotenv()
 # CONFIG — tokenlar .env dan o'qiladi
 # ============================================================
 ACCESS_TOKEN = os.getenv("AMOCRM_TOKEN")
-SUBDOMAIN    = os.getenv("AMOCRM_SUBDOMAIN")  # misol: "numbersarkon"
+# Accept either AMOCRM_SUBDOMAIN or extract from AMOCRM_DOMAIN
+_domain   = os.getenv("AMOCRM_DOMAIN", "")
+SUBDOMAIN = os.getenv("AMOCRM_SUBDOMAIN") or (_domain.split(".")[0] if _domain else None)
 
 if not ACCESS_TOKEN or not SUBDOMAIN:
-    print("XATO: .env da AMOCRM_TOKEN yoki AMOCRM_SUBDOMAIN topilmadi.")
+    print("XATO: .env da AMOCRM_TOKEN yoki AMOCRM_SUBDOMAIN/AMOCRM_DOMAIN topilmadi.")
     sys.exit(1)
 
 TARGET_MANAGER_NAME            = "Perfect"
