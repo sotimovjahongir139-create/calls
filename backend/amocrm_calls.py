@@ -56,6 +56,69 @@ RETRY_DELAY = 5
 
 DB_CALLS = os.getenv("MYSQL_DB_CALLS", "calldb2")
 
+
+def ensure_tables():
+    conn = get_conn()
+    cur  = conn.cursor()
+    cur.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_CALLS}` CHARACTER SET utf8mb4")
+    conn.commit(); cur.close(); conn.close()
+
+    conn = get_conn(DB_CALLS)
+    cur  = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS amo_call_monthly_stats (
+            id             INT AUTO_INCREMENT PRIMARY KEY,
+            stat_month     DATE NOT NULL,
+            manager_name   VARCHAR(100) NOT NULL,
+            period_start   DATE,
+            period_end     DATE,
+            total_calls         INT DEFAULT 0,
+            incoming_answered   INT DEFAULT 0,
+            outgoing_answered   INT DEFAULT 0,
+            missed_clients      INT DEFAULT 0,
+            recalled_clients    INT DEFAULT 0,
+            not_recalled_clients INT DEFAULT 0,
+            answer_rate  FLOAT DEFAULT 0,
+            recall_rate  FLOAT DEFAULT 0,
+            no_recall_pct FLOAT DEFAULT 0,
+            h_09_11 INT DEFAULT 0,
+            h_11_13 INT DEFAULT 0,
+            h_13_15 INT DEFAULT 0,
+            h_15_17 INT DEFAULT 0,
+            h_17_19 INT DEFAULT 0,
+            h_19_21 INT DEFAULT 0,
+            h_21_23 INT DEFAULT 0,
+            loaded_at DATETIME DEFAULT NOW(),
+            UNIQUE KEY uq_month_mgr (stat_month, manager_name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS amo_call_daily_stats (
+            id             INT AUTO_INCREMENT PRIMARY KEY,
+            stat_date      DATE NOT NULL,
+            manager_name   VARCHAR(100) NOT NULL,
+            total_calls         INT DEFAULT 0,
+            incoming_answered   INT DEFAULT 0,
+            outgoing_answered   INT DEFAULT 0,
+            missed_clients      INT DEFAULT 0,
+            recalled_clients    INT DEFAULT 0,
+            not_recalled_clients INT DEFAULT 0,
+            answer_rate  FLOAT DEFAULT 0,
+            recall_rate  FLOAT DEFAULT 0,
+            no_recall_pct FLOAT DEFAULT 0,
+            h_09_11 INT DEFAULT 0,
+            h_11_13 INT DEFAULT 0,
+            h_13_15 INT DEFAULT 0,
+            h_15_17 INT DEFAULT 0,
+            h_17_19 INT DEFAULT 0,
+            h_19_21 INT DEFAULT 0,
+            h_21_23 INT DEFAULT 0,
+            loaded_at DATETIME DEFAULT NOW(),
+            UNIQUE KEY uq_date_mgr (stat_date, manager_name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    """)
+    conn.commit(); cur.close(); conn.close()
+
 HOUR_SLOTS = [
     ("09:00-11:00", 9,  11),
     ("11:00-13:00", 11, 13),
@@ -365,6 +428,7 @@ def print_stats(title, s):
 # MAIN
 # ============================================================
 def main():
+    ensure_tables()
     print("="*65)
     print("  AMOCRM CALL ETL — " + now.strftime("%d.%m.%Y %H:%M"))
     print("="*65)
@@ -415,7 +479,7 @@ def main():
     save_monthly(STAT_MONTH, MONTH_START.date(), MONTH_END.date(), manager, m_stats)
     save_daily(STAT_DATE, manager, d_stats)
 
-    print("\n✓ TAYYOR!\n")
+    print("\nTAYYOR!\n")
 
 
 if __name__ == "__main__":
