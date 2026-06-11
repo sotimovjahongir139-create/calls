@@ -145,28 +145,28 @@ def api_stats_telegram(type: str = Query("daily", regex="^(daily|monthly)$")):
     try:
         conn = get_conn(DB_TELEGRAM)
         cur  = conn.cursor()
-        if type == "daily":
-            cur.execute("SELECT * FROM telegram_daily_stats ORDER BY report_date DESC LIMIT 1")
-        else:
+        if type == "monthly":
             cur.execute("""
                 SELECT
-                    SUM(total_events)     AS total_events,
-                    SUM(client_messages)  AS client_messages,
-                    SUM(manager_messages) AS manager_messages,
-                    SUM(client_turns)     AS client_turns,
-                    SUM(answered_turns)   AS answered_turns,
-                    SUM(waiting_turns)    AS waiting_turns,
-                    ROUND(SUM(answered_turns)/NULLIF(SUM(client_turns),0)*100, 2) AS response_rate,
-                    ROUND(AVG(avg_response_minutes), 2) AS avg_response_minutes
+                    COALESCE(SUM(total_events),0)     AS total_events,
+                    COALESCE(SUM(client_messages),0)  AS client_messages,
+                    COALESCE(SUM(manager_messages),0) AS manager_messages,
+                    COALESCE(SUM(client_turns),0)     AS client_turns,
+                    COALESCE(SUM(answered_turns),0)   AS answered_turns,
+                    COALESCE(SUM(waiting_turns),0)    AS waiting_turns,
+                    COALESCE(ROUND(AVG(response_rate),2),0)           AS response_rate,
+                    COALESCE(ROUND(AVG(avg_response_minutes),2),0)    AS avg_response_minutes
                 FROM telegram_daily_stats
                 WHERE report_date >= DATE_FORMAT(NOW(), '%%Y-%%m-01')
             """)
-        rows = cur.fetchall()
+        else:
+            cur.execute("SELECT * FROM telegram_daily_stats ORDER BY report_date DESC LIMIT 1")
+        row = cur.fetchone()
         cur.close(); conn.close()
+        return dict(row) if row else {}
     except Exception as e:
         logger.error("telegram stats: %s", e)
-        raise HTTPException(status_code=500, detail="DB error")
-    return {"type": type, "rows": rows}
+        return {"error": str(e), "total_events": 0}
 
 
 # ── /api/debug/telegram ──────────────────────────────────────────────────────

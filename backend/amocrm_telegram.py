@@ -63,49 +63,47 @@ TS_TO   = int(DAY_END.timestamp())
 # SQL
 # ============================================================
 def ensure_tables():
-    conn = get_conn()
-    cur  = conn.cursor()
-    cur.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_TELEGRAM}`")
-    conn.commit(); cur.close(); conn.close()
-
     conn = get_conn(DB_TELEGRAM)
     cur  = conn.cursor()
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS telegram_daily_stats (
-        report_date   DATE         NOT NULL,
-        report_name   VARCHAR(100) NOT NULL,
-        unique_contacts INT NOT NULL,
-        unique_talks    INT NOT NULL,
-        unique_leads    INT NOT NULL,
-        total_events    INT NOT NULL,
-        client_messages  INT NOT NULL,
-        manager_messages INT NOT NULL,
-        client_turns     INT NOT NULL,
-        answered_turns   INT NOT NULL,
-        waiting_turns    INT NOT NULL,
-        response_rate    FLOAT NOT NULL,
-        avg_response_minutes   FLOAT NULL,
-        median_response_minutes FLOAT NULL,
-        loaded_at DATETIME NOT NULL DEFAULT NOW(),
-        PRIMARY KEY (report_date, report_name)
-    )""")
+        CREATE TABLE IF NOT EXISTS telegram_daily_stats (
+            report_date             DATE         NOT NULL,
+            report_name             VARCHAR(100) NOT NULL,
+            unique_contacts         INT NOT NULL DEFAULT 0,
+            unique_talks            INT NOT NULL DEFAULT 0,
+            unique_leads            INT NOT NULL DEFAULT 0,
+            total_events            INT NOT NULL DEFAULT 0,
+            client_messages         INT NOT NULL DEFAULT 0,
+            manager_messages        INT NOT NULL DEFAULT 0,
+            client_turns            INT NOT NULL DEFAULT 0,
+            answered_turns          INT NOT NULL DEFAULT 0,
+            waiting_turns           INT NOT NULL DEFAULT 0,
+            response_rate           FLOAT NOT NULL DEFAULT 0,
+            avg_response_minutes    FLOAT NULL,
+            median_response_minutes FLOAT NULL,
+            loaded_at               DATETIME NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (report_date, report_name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    """)
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS telegram_response_details (
-        id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-        report_date DATE NOT NULL,
-        report_name VARCHAR(100) NOT NULL,
-        contact_id  BIGINT NULL,
-        lead_id     BIGINT NULL,
-        talk_id     BIGINT NULL,
-        client_time       DATETIME NULL,
-        manager_reply_time DATETIME NULL,
-        response_minutes   FLOAT NULL,
-        status        VARCHAR(30) NOT NULL,
-        client_messages_in_turn   INT NULL,
-        manager_messages_in_reply INT NULL,
-        loaded_at DATETIME NOT NULL DEFAULT NOW()
-    )""")
+        CREATE TABLE IF NOT EXISTS telegram_response_details (
+            id                        BIGINT AUTO_INCREMENT PRIMARY KEY,
+            report_date               DATE NOT NULL,
+            report_name               VARCHAR(100) NOT NULL,
+            contact_id                BIGINT NULL,
+            lead_id                   BIGINT NULL,
+            talk_id                   BIGINT NULL,
+            client_time               DATETIME NULL,
+            manager_reply_time        DATETIME NULL,
+            response_minutes          FLOAT NULL,
+            status                    VARCHAR(30) NOT NULL,
+            client_messages_in_turn   INT NULL,
+            manager_messages_in_reply INT NULL,
+            loaded_at                 DATETIME NOT NULL DEFAULT NOW()
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    """)
     conn.commit(); cur.close(); conn.close()
+    print("Tables OK")
 
 
 def save_to_sql(summary, detail_rows):

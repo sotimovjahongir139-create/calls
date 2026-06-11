@@ -240,8 +240,10 @@ export default function StatsPanel({ view = "calls" }) {
 
   const { data, error, loading } = usePolling(fetchFn, 5 * 60_000, [view, period]);
 
-  const rows = data?.rows ?? [];
-  const row  = rows[0] ?? null;
+  // calls endpoint returns {rows: [...]}, telegram returns flat dict
+  const row = view === "calls"
+    ? (data?.rows?.[0] ?? null)
+    : (data && !data.error && data.total_events !== undefined ? data : null);
 
   const title = view === "telegram" ? "💬 Telegram Statistika" : "📞 Qoʼngʼiroqlar Statistika";
 

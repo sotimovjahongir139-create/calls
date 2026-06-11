@@ -49,12 +49,12 @@ if __name__ == "__main__":
     ensure_schema()
 
     scheduler = BlockingScheduler(timezone="Asia/Tashkent")
-    scheduler.add_job(run_realtime_fetcher, "interval", minutes=20,  id="rt_fetcher")
+    scheduler.add_job(run_realtime_fetcher, "interval", minutes=1,   id="rt_fetcher")
     scheduler.add_job(_calls_etl,           "cron",     hour=6,  minute=0,  id="calls_etl")
     scheduler.add_job(_telegram_etl,        "cron",     hour=6,  minute=5,  id="telegram_etl")
     scheduler.add_job(_rating_persist,      "cron",     hour=22, minute=0,  id="rating_persist")
 
-    logger.info("Jobs: rt_fetcher(20min) calls_etl(06:00) telegram_etl(06:05) rating_persist(22:00)")
+    logger.info("Jobs: rt_fetcher(1min) calls_etl(06:00) telegram_etl(06:05) rating_persist(22:00)")
 
     # run once immediately on startup
     run_realtime_fetcher()
