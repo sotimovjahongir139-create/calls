@@ -75,3 +75,100 @@ def ensure_schema():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """)
     conn.commit(); cur.close(); conn.close()
+
+    conn = get_conn(DB_CALLS)
+    cur  = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS amo_call_monthly_stats (
+            id                   INT AUTO_INCREMENT PRIMARY KEY,
+            stat_month           DATE NOT NULL,
+            manager_name         VARCHAR(100) NOT NULL,
+            period_start         DATE,
+            period_end           DATE,
+            total_calls          INT DEFAULT 0,
+            incoming_answered    INT DEFAULT 0,
+            outgoing_answered    INT DEFAULT 0,
+            missed_clients       INT DEFAULT 0,
+            recalled_clients     INT DEFAULT 0,
+            not_recalled_clients INT DEFAULT 0,
+            answer_rate          FLOAT DEFAULT 0,
+            recall_rate          FLOAT DEFAULT 0,
+            no_recall_pct        FLOAT DEFAULT 0,
+            h_09_11 INT DEFAULT 0,
+            h_11_13 INT DEFAULT 0,
+            h_13_15 INT DEFAULT 0,
+            h_15_17 INT DEFAULT 0,
+            h_17_19 INT DEFAULT 0,
+            h_19_21 INT DEFAULT 0,
+            h_21_23 INT DEFAULT 0,
+            loaded_at DATETIME DEFAULT NOW(),
+            UNIQUE KEY uq_month_mgr (stat_month, manager_name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS amo_call_daily_stats (
+            id                   INT AUTO_INCREMENT PRIMARY KEY,
+            stat_date            DATE NOT NULL,
+            manager_name         VARCHAR(100) NOT NULL,
+            total_calls          INT DEFAULT 0,
+            incoming_answered    INT DEFAULT 0,
+            outgoing_answered    INT DEFAULT 0,
+            missed_clients       INT DEFAULT 0,
+            recalled_clients     INT DEFAULT 0,
+            not_recalled_clients INT DEFAULT 0,
+            answer_rate          FLOAT DEFAULT 0,
+            recall_rate          FLOAT DEFAULT 0,
+            no_recall_pct        FLOAT DEFAULT 0,
+            h_09_11 INT DEFAULT 0,
+            h_11_13 INT DEFAULT 0,
+            h_13_15 INT DEFAULT 0,
+            h_15_17 INT DEFAULT 0,
+            h_17_19 INT DEFAULT 0,
+            h_19_21 INT DEFAULT 0,
+            h_21_23 INT DEFAULT 0,
+            loaded_at DATETIME DEFAULT NOW(),
+            UNIQUE KEY uq_date_mgr (stat_date, manager_name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    """)
+    conn.commit(); cur.close(); conn.close()
+
+    conn = get_conn(DB_TELEGRAM)
+    cur  = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS telegram_daily_stats (
+            report_date             DATE NOT NULL,
+            report_name             VARCHAR(100) NOT NULL,
+            unique_contacts         INT NOT NULL DEFAULT 0,
+            unique_talks            INT NOT NULL DEFAULT 0,
+            unique_leads            INT NOT NULL DEFAULT 0,
+            total_events            INT NOT NULL DEFAULT 0,
+            client_messages         INT NOT NULL DEFAULT 0,
+            manager_messages        INT NOT NULL DEFAULT 0,
+            client_turns            INT NOT NULL DEFAULT 0,
+            answered_turns          INT NOT NULL DEFAULT 0,
+            waiting_turns           INT NOT NULL DEFAULT 0,
+            response_rate           FLOAT NOT NULL DEFAULT 0,
+            avg_response_minutes    FLOAT NULL,
+            median_response_minutes FLOAT NULL,
+            loaded_at               DATETIME NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (report_date, report_name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS telegram_response_details (
+            id                        BIGINT AUTO_INCREMENT PRIMARY KEY,
+            report_date               DATE NOT NULL,
+            report_name               VARCHAR(100) NOT NULL,
+            contact_id                BIGINT NULL,
+            lead_id                   BIGINT NULL,
+            talk_id                   BIGINT NULL,
+            client_time               DATETIME NULL,
+            manager_reply_time        DATETIME NULL,
+            response_minutes          FLOAT NULL,
+            status                    VARCHAR(30) NOT NULL,
+            client_messages_in_turn   INT NULL,
+            manager_messages_in_reply INT NULL,
+            loaded_at                 DATETIME NOT NULL DEFAULT NOW()
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    """)
+    conn.commit(); cur.close(); conn.close()
