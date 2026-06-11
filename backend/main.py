@@ -171,6 +171,8 @@ def api_run_etl(script: str = Query(..., regex="^(calls|telegram|all)$")):
 
     def run_telegram():
         try:
+            import sys as _sys
+            _sys.modules.pop("amocrm_telegram", None)
             from amocrm_telegram import main as tg_main
             tg_main()
             results["telegram"] = "ok"
