@@ -224,18 +224,12 @@ function TelegramView({ row, loading, period }) {
           value={row.response_rate || 0}
           color="bg-green-500"
         />
-        <div className="grid grid-cols-2 gap-4 pt-2">
+        <div className="pt-2">
           <div className="text-center bg-slate-700/50 rounded-lg p-3">
             <div className="text-xl font-extrabold text-blue-400">
               {Number(row.avg_response_minutes || 0).toFixed(1)}
             </div>
             <div className="text-[10px] text-slate-500 mt-0.5">O&apos;rtacha javob (daq)</div>
-          </div>
-          <div className="text-center bg-slate-700/50 rounded-lg p-3">
-            <div className="text-xl font-extrabold text-purple-400">
-              {Number(row.median_response_minutes || 0).toFixed(1)}
-            </div>
-            <div className="text-[10px] text-slate-500 mt-0.5">Median javob (daq)</div>
           </div>
         </div>
       </div>

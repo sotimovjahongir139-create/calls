@@ -27,6 +27,9 @@ export function usePolling(fetchFn, intervalMs, deps = []) {
   }, deps);
 
   useEffect(() => {
+    setData(null);
+    setLoading(true);
+    setError(null);
     load();
     const id = setInterval(load, intervalMs);
     return () => clearInterval(id);
