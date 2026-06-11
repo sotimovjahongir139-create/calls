@@ -44,15 +44,13 @@ RETRY_DELAY = 3
 # ============================================================
 # SANA — argument yoki kecha
 # ============================================================
+report_day = datetime.now() - timedelta(days=1)
 if len(sys.argv) > 1:
     try:
         report_day = datetime.strptime(sys.argv[1], "%Y-%m-%d")
         print(f"Manual sana: {report_day.strftime('%d.%m.%Y')}")
     except ValueError:
-        print("Sana formati xato. Misol: python script.py 2026-05-01")
-        sys.exit(1)
-else:
-    report_day = datetime.now() - timedelta(days=1)
+        pass  # not a date arg (e.g. uvicorn args), use yesterday
 
 DAY_START = report_day.replace(hour=0,  minute=0,  second=0,  microsecond=0)
 DAY_END   = report_day.replace(hour=23, minute=59, second=59, microsecond=0)
