@@ -296,6 +296,11 @@ def calc(records):
 
             elif dur > 0:
                 in_a += 1
+                if cid in missed:
+                    # client called back and was answered — resolved without manager recall
+                    missed.discard(cid)
+                    missed_time.pop(cid, None)
+                    recld.discard(cid)
                 h = from_ts(ts).hour
                 for label, sh, eh in HOUR_SLOTS:
                     if sh <= h < eh:
